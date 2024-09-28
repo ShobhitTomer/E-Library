@@ -85,12 +85,16 @@ const loginUser = async (req: Request, res: Response, next: NextFunction) => {
   }
 
   //Create access token
-  const token = sign({ sub: user._id }, config.jwtSecret as string, {
-    expiresIn: "7d",
-    algorithm: "HS256",
-  });
+  try {
+    const token = sign({ sub: user._id }, config.jwtSecret as string, {
+      expiresIn: "7d",
+      algorithm: "HS256",
+    });
 
-  res.json({ accessToken: token });
+    res.json({ accessToken: token });
+  } catch (err) {
+    return next(createHttpError(500, "Error while signing JWT token"));
+  }
 };
 
 export { createUser, loginUser };
