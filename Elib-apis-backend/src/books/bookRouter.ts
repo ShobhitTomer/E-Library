@@ -8,7 +8,7 @@ const bookRouter = express.Router();
 //file store locally -> upload to cloudinary -> delete file from local
 const upload = multer({
   dest: path.resolve(__dirname, "../../public/data/uploads"),
-  limits: { fileSize: 3e7 }, //30mb
+  limits: { fileSize: 1e7 }, //10mb is the max size allowed by cloudinary hence the limit in multer
 });
 
 //api/books
