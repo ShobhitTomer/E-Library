@@ -20,6 +20,7 @@ const authenticate = (req: Request, res: Response, next: NextFunction) => {
 
     next();
   } catch (err) {
+    console.log(err);
     return next(createHttpError(401, "Token expired or invalid"));
   }
 };
