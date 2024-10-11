@@ -102,6 +102,12 @@ const updateBook = async (req: Request, res: Response, next: NextFunction) => {
       format: coverMimeType,
     });
 
+    //Delete the old cover image from cloudinary through publicId
+    const coverFileSplits = book.coverImage.split("/");
+    const coverImagePublicId =
+      coverFileSplits.at(-2) + "/" + coverFileSplits.at(-1)?.split(".").at(-2);
+    await cloudinary.uploader.destroy(coverImagePublicId);
+
     completeCoverImage = uploadResult.secure_url;
     await fs.promises.unlink(filePath);
   }
@@ -122,6 +128,15 @@ const updateBook = async (req: Request, res: Response, next: NextFunction) => {
       folder: "book-pdfs",
       format: "pdf",
     });
+
+    //Delete the old pdf from cloudinary
+    const pdfFileSplits = book.file.split("/");
+    const filePublicId = pdfFileSplits.at(-2) + "/" + pdfFileSplits.at(-1);
+
+    await cloudinary.uploader.destroy(filePublicId, {
+      resource_type: "raw",
+    });
+
     completeFileName = uploadBookResult.secure_url;
     await fs.promises.unlink(bookFilePath);
   }
