@@ -109,22 +109,38 @@ const updateBook = async (req: Request, res: Response, next: NextFunction) => {
   //check if the file exists in the request
   let completeFileName = "";
   if (files.file) {
+    const bookFileName = files.file[0].filename;
     const bookFilePath = path.resolve(
       __dirname,
-      "../../public/data/uploads/" + files.file[0].filename
+      "../../public/data/uploads/" + bookFileName
     );
-
-    const bookFileName = files.file[0].filename;
     completeFileName = bookFileName;
 
     const uploadBookResult = await cloudinary.uploader.upload(bookFilePath, {
       resource_type: "raw",
       filename_override: completeFileName,
       folder: "book-pdfs",
+      format: "pdf",
     });
     completeFileName = uploadBookResult.secure_url;
     await fs.promises.unlink(bookFilePath);
   }
+
+  const updatedBook = await bookModel.findOneAndUpdate(
+    {
+      _id: bookId,
+    },
+    {
+      title: title,
+      genre: genre,
+      coverImage: completeCoverImage ? completeCoverImage : book.coverImage,
+      file: completeFileName ? completeFileName : book.file,
+    },
+    {
+      new: true,
+    }
+  );
+  res.json(updatedBook);
 };
 
 export { createBook, updateBook };
