@@ -86,30 +86,49 @@ const updateBook = async (req: Request, res: Response, next: NextFunction) => {
     return next(createHttpError(403, "You cannot update other's books"));
   }
 
-  //check if cover images exists or not
   const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+  //check if cover images exists or not
   let completeCoverImage = "";
   if (files.coverImage) {
-    const filename = files.coverImage[0].filename;
     const coverMimeType = files.coverImage[0].mimetype.split("/").at(-1);
+    const filename = files.coverImage[0].filename;
 
     //Send files to cloudinary
-    const filePath = resolve(__dirname, "../../public/data/uploads" + filename);
+    const filePath = path.resolve(
+      __dirname,
+      "../../public/data/uploads/" + files.coverImage[0].filename
+    );
     completeCoverImage = filename;
-    const uploadResult = await cloudinary.uploader.upload(filePath, {
-      filename_override: completeCoverImage,
-      folder: "book-covers",
-      format: coverMimeType,
-    });
-
-    //Delete the old cover image from cloudinary through publicId
-    const coverFileSplits = book.coverImage.split("/");
-    const coverImagePublicId =
-      coverFileSplits.at(-2) + "/" + coverFileSplits.at(-1)?.split(".").at(-2);
-    await cloudinary.uploader.destroy(coverImagePublicId);
-
+    let uploadResult;
+    try {
+      uploadResult = await cloudinary.uploader.upload(filePath, {
+        filename_override: completeCoverImage,
+        folder: "book-covers",
+        format: coverMimeType,
+      });
+    } catch (err) {
+      console.log(err);
+      return next(
+        createHttpError(500, "Error while uploading the cover image")
+      );
+    }
     completeCoverImage = uploadResult.secure_url;
-    await fs.promises.unlink(filePath);
+    //Delete the old cover image from cloudinary through publicId
+    try {
+      const coverFileSplits = book.coverImage.split("/");
+      const coverImagePublicId =
+        coverFileSplits.at(-2) +
+        "/" +
+        coverFileSplits.at(-1)?.split(".").at(-2);
+      await cloudinary.uploader.destroy(coverImagePublicId);
+    } catch (err) {
+      console.log("Failed to delete old image from Cloudinary: ", err);
+    }
+    try {
+      await fs.promises.unlink(filePath);
+    } catch (err) {
+      console.log("Failed to delete file from disk: ", err);
+    }
   }
 
   //check if the file exists in the request
@@ -130,12 +149,16 @@ const updateBook = async (req: Request, res: Response, next: NextFunction) => {
     });
 
     //Delete the old pdf from cloudinary
-    const pdfFileSplits = book.file.split("/");
-    const filePublicId = pdfFileSplits.at(-2) + "/" + pdfFileSplits.at(-1);
+    try {
+      const pdfFileSplits = book.file.split("/");
+      const filePublicId = pdfFileSplits.at(-2) + "/" + pdfFileSplits.at(-1);
 
-    await cloudinary.uploader.destroy(filePublicId, {
-      resource_type: "raw",
-    });
+      await cloudinary.uploader.destroy(filePublicId, {
+        resource_type: "raw",
+      });
+    } catch (err) {
+      console.log(err);
+    }
 
     completeFileName = uploadBookResult.secure_url;
     await fs.promises.unlink(bookFilePath);
